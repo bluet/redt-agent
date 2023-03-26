@@ -1,0 +1,12 @@
+[Unit]
+Description=RedT Agent
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+ExecStart=/path/to/deployment/directory/redt-agent
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

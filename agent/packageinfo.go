@@ -11,6 +11,18 @@ import (
 	"strings"
 )
 
+type DefaultPackageInfoProvider struct{}
+
+func (p *DefaultPackageInfoProvider) GetPackageInfo() ([]PackageInfo, error) {
+	return getPackageInfo()
+}
+
+type DefaultPackageInfoReporter struct{}
+
+func (r *DefaultPackageInfoReporter) ReportPackageInfo(packages []PackageInfo) error {
+	return reportPackageInfo(packages)
+}
+
 func getPackageInfo() ([]PackageInfo, error) {
 	pm, err := getPackageManager()
 	if err != nil {

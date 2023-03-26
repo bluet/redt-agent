@@ -31,6 +31,34 @@ type TelemetryData struct {
 	LoggedInUser string  `json:"logged_in_user"`
 }
 
+type TelemetryDataProvider interface {
+	CollectTelemetryData() (TelemetryData, error)
+}
+
+type TelemetryDataSender interface {
+	SendTelemetryData(data TelemetryData) error
+}
+
+type PackageInfoProvider interface {
+	GetPackageInfo() ([]PackageInfo, error)
+}
+
+type PackageInfoReporter interface {
+	ReportPackageInfo(packages []PackageInfo) error
+}
+
+type DefaultTelemetryDataProvider struct{}
+
+func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
+	return collectTelemetryData()
+}
+
+type DefaultTelemetryDataSender struct{}
+
+func (d DefaultTelemetryDataSender) SendTelemetryData(data TelemetryData) error {
+	return sendTelemetryData(data)
+}
+
 func Run() {
 	log.Printf("Starting RedT agent at %s\n", utils.CurrentTimestamp())
 
@@ -38,35 +66,36 @@ func Run() {
 
 	ticker := time.NewTicker(pollInterval)
 	for range ticker.C {
-		handleTelemetry()
-		lastUpgradeCheck = handlePackageInfo(lastUpgradeCheck)
-		checkAndPerformUpgrade()
+		handleTelemetry(&DefaultTelemetryDataProvider{}, &DefaultTelemetryDataSender{})
+		lastUpgradeCheck = handlePackageInfo(&DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck)
 	}
 }
 
-func handleTelemetry() {
-	telemetryData, err := collectTelemetryData()
+func handleTelemetry(telemetryDataProvider TelemetryDataProvider, telemetryDataSender TelemetryDataSender) {
+
+	telemetryData, err := telemetryDataProvider.CollectTelemetryData()
 	if err != nil {
 		log.Printf("Error collecting telemetry data: %v", err)
 	} else {
-		err = sendTelemetryData(telemetryData)
+		err = telemetryDataSender.SendTelemetryData(telemetryData)
 		if err != nil {
 			log.Printf("Error sending telemetry data: %v", err)
 		}
 	}
 }
 
-func handlePackageInfo(lastUpgradeCheck time.Time) time.Time {
+func handlePackageInfo(provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time) time.Time {
 	if time.Since(lastUpgradeCheck) >= upgradeCheckPeriod {
-		packages, err := getPackageInfo()
+		packages, err := provider.GetPackageInfo()
 		if err != nil {
 			log.Printf("Error getting package info: %v", err)
 		} else {
-			err = reportPackageInfo(packages)
+			err = reporter.ReportPackageInfo(packages)
 			if err != nil {
 				log.Printf("Error reporting package info: %v", err)
+			} else {
+				lastUpgradeCheck = time.Now()
 			}
-			lastUpgradeCheck = time.Now()
 		}
 	}
 	return lastUpgradeCheck

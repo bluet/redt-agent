@@ -47,6 +47,14 @@ type PackageInfoReporter interface {
 	ReportPackageInfo(packages []PackageInfo) error
 }
 
+type UpgradeChecker interface {
+	CheckAndPerformUpgrade() error
+}
+
+type UpgradePerformer interface {
+	PerformUpgrade() error
+}
+
 type DefaultTelemetryDataProvider struct{}
 
 func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
@@ -59,6 +67,18 @@ func (d DefaultTelemetryDataSender) SendTelemetryData(data TelemetryData) error 
 	return sendTelemetryData(data)
 }
 
+type DefaultUpgradeChecker struct{}
+
+func (d DefaultUpgradeChecker) CheckAndPerformUpgrade() error {
+	return checkAndPerformUpgrade()
+}
+
+type DefaultUpgradePerformer struct{}
+
+func (d DefaultUpgradePerformer) PerformUpgrade() error {
+	return performUpgrade()
+}
+
 func Run() {
 	log.Printf("Starting RedT agent at %s\n", utils.CurrentTimestamp())
 
@@ -67,7 +87,7 @@ func Run() {
 	ticker := time.NewTicker(pollInterval)
 	for range ticker.C {
 		handleTelemetry(&DefaultTelemetryDataProvider{}, &DefaultTelemetryDataSender{})
-		lastUpgradeCheck = handlePackageInfo(&DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck)
+		lastUpgradeCheck = handlePackageInfo(&DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck, &DefaultUpgradeChecker{})
 	}
 }
 
@@ -84,7 +104,7 @@ func handleTelemetry(telemetryDataProvider TelemetryDataProvider, telemetryDataS
 	}
 }
 
-func handlePackageInfo(provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time) time.Time {
+func handlePackageInfo(provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time, upgradeChecker UpgradeChecker) time.Time {
 	if time.Since(lastUpgradeCheck) >= upgradeCheckPeriod {
 		packages, err := provider.GetPackageInfo()
 		if err != nil {
@@ -94,6 +114,10 @@ func handlePackageInfo(provider PackageInfoProvider, reporter PackageInfoReporte
 			if err != nil {
 				log.Printf("Error reporting package info: %v", err)
 			} else {
+				err = upgradeChecker.CheckAndPerformUpgrade()
+				if err != nil {
+					log.Printf("Error checking and performing upgrade: %v", err)
+				}
 				lastUpgradeCheck = time.Now()
 			}
 		}

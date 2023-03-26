@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -70,24 +71,29 @@ func reportPackageInfo(packages []PackageInfo) error {
 	return nil
 }
 
-func checkAndPerformUpgrade() {
+func checkAndPerformUpgrade() error {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", upgradeEndpoint, nil)
 	if err != nil {
-		log.Panicf("Error creating upgrade request: %v\n", err)
-		return
+		log.Printf("Error creating upgrade request: %v\n", err)
+		return err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Panicf("Error checking for upgrades: %v\n", err)
-		return
+		log.Printf("Error checking for upgrades: %v\n", err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		performUpgrade()
+		err = performUpgrade()
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func getPackageManager() (string, error) {
@@ -155,13 +161,13 @@ func parseDnfYumOutput(output string) []PackageInfo {
 	return packages
 }
 
-func performUpgrade() {
+func performUpgrade() error {
 	fmt.Println("Upgrading packages...")
 
 	pm, err := getPackageManager()
 	if err != nil {
-		log.Panicf("Error determining package manager: %v\n", err)
-		return
+		log.Printf("Error determining package manager: %v\n", err)
+		return err
 	}
 
 	var cmd *exec.Cmd
@@ -172,15 +178,17 @@ func performUpgrade() {
 	case "dnf", "yum":
 		cmd = exec.Command("sudo", pm, "upgrade", "-y")
 	default:
-		log.Panicf("Unsupported package manager\n")
-		return
+		err := errors.New("Unsupported package manager")
+		log.Printf("%v\n", err)
+		return err
 	}
 
 	err = cmd.Run()
 	if err != nil {
-		log.Panicf("Error upgrading packages: %v\n", err)
-		return
+		log.Printf("Error upgrading packages: %v\n", err)
+		return err
 	}
 
 	fmt.Println("Upgrade complete.")
+	return nil
 }

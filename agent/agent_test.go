@@ -40,6 +40,14 @@ func (m MockPackageInfoReporter) ReportPackageInfo(packages []PackageInfo) error
 	return m.err
 }
 
+type MockUpgradeChecker struct {
+	err error
+}
+
+func (m MockUpgradeChecker) CheckAndPerformUpgrade() error {
+	return m.err
+}
+
 func TestHandleTelemetry(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -90,6 +98,7 @@ func TestHandlePackageInfo(t *testing.T) {
 		name                string
 		packageInfoProvider MockPackageInfoProvider
 		packageInfoReporter MockPackageInfoReporter
+		upgradeChecker      MockUpgradeChecker
 		shouldUpdate        bool
 		wantError           bool
 	}{
@@ -100,6 +109,9 @@ func TestHandlePackageInfo(t *testing.T) {
 				err:      nil,
 			},
 			packageInfoReporter: MockPackageInfoReporter{
+				err: nil,
+			},
+			upgradeChecker: MockUpgradeChecker{
 				err: nil,
 			},
 			shouldUpdate: true,
@@ -114,6 +126,9 @@ func TestHandlePackageInfo(t *testing.T) {
 			packageInfoReporter: MockPackageInfoReporter{
 				err: nil,
 			},
+			upgradeChecker: MockUpgradeChecker{
+				err: nil,
+			},
 			shouldUpdate: false,
 			wantError:    true,
 		},
@@ -126,6 +141,9 @@ func TestHandlePackageInfo(t *testing.T) {
 			packageInfoReporter: MockPackageInfoReporter{
 				err: errors.New("error reporting package info"),
 			},
+			upgradeChecker: MockUpgradeChecker{
+				err: nil,
+			},
 			shouldUpdate: false,
 			wantError:    true,
 		},
@@ -134,7 +152,7 @@ func TestHandlePackageInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lastUpgradeCheck := time.Now().Add(-upgradeCheckPeriod)
-			newUpgradeCheck := handlePackageInfo(tt.packageInfoProvider, tt.packageInfoReporter, lastUpgradeCheck)
+			newUpgradeCheck := handlePackageInfo(tt.packageInfoProvider, tt.packageInfoReporter, lastUpgradeCheck, tt.upgradeChecker)
 			if tt.shouldUpdate && time.Since(newUpgradeCheck) >= upgradeCheckPeriod {
 				t.Errorf("Expected lastUpgradeCheck to be updated after upgradeCheckPeriod, but it was not.")
 			}

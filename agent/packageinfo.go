@@ -178,7 +178,7 @@ func performUpgrade() error {
 	case "dnf", "yum":
 		cmd = exec.Command("sudo", pm, "upgrade", "-y")
 	default:
-		err := errors.New("Unsupported package manager")
+		err := errors.New("unsupported package manager")
 		log.Printf("%v\n", err)
 		return err
 	}

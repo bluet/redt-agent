@@ -1,0 +1,3 @@
+backendURL: "https://redt.top/api"
+pollInterval: 60
+upgradeCheckPeriod: 5

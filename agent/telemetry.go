@@ -14,6 +14,18 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+type DefaultTelemetryDataProvider struct{}
+
+func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
+	return collectTelemetryData()
+}
+
+type DefaultTelemetryDataSender struct{}
+
+func (d DefaultTelemetryDataSender) SendTelemetryData(config *Config, data TelemetryData) error {
+	return sendTelemetryData(config, data)
+}
+
 func collectTelemetryData() (TelemetryData, error) {
 	var data TelemetryData
 
@@ -55,13 +67,13 @@ func collectTelemetryData() (TelemetryData, error) {
 	return data, nil
 }
 
-func sendTelemetryData(data TelemetryData) error {
+func sendTelemetryData(config *Config, data TelemetryData) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal telemetry data: %v", err)
 	}
 
-	resp, err := http.Post(telemetryEndpoint, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(config.TelemetryEndpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to send telemetry data: %v", err)
 	}

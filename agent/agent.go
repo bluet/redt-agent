@@ -7,15 +7,6 @@ import (
 	"github.com/bluet/redt-agent/utils"
 )
 
-const (
-	backendURL         = "https://redt.top/api"
-	telemetryEndpoint  = backendURL + "/telemetry"
-	packageEndpoint    = backendURL + "/packages"
-	upgradeEndpoint    = backendURL + "/upgrade"
-	pollInterval       = 60 * time.Second
-	upgradeCheckPeriod = 5 * time.Minute
-)
-
 type PackageInfo struct {
 	Name       string `json:"name"`
 	Version    string `json:"version"`
@@ -36,7 +27,7 @@ type TelemetryDataProvider interface {
 }
 
 type TelemetryDataSender interface {
-	SendTelemetryData(data TelemetryData) error
+	SendTelemetryData(config *Config, data TelemetryData) error
 }
 
 type PackageInfoProvider interface {
@@ -44,77 +35,58 @@ type PackageInfoProvider interface {
 }
 
 type PackageInfoReporter interface {
-	ReportPackageInfo(packages []PackageInfo) error
+	ReportPackageInfo(config *Config, packages []PackageInfo) error
 }
 
 type UpgradeChecker interface {
-	CheckAndPerformUpgrade() error
+	CheckAndPerformUpgrade(config *Config) error
 }
 
 type UpgradePerformer interface {
 	PerformUpgrade() error
 }
 
-type DefaultTelemetryDataProvider struct{}
-
-func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
-	return collectTelemetryData()
-}
-
-type DefaultTelemetryDataSender struct{}
-
-func (d DefaultTelemetryDataSender) SendTelemetryData(data TelemetryData) error {
-	return sendTelemetryData(data)
-}
-
-type DefaultUpgradeChecker struct{}
-
-func (d DefaultUpgradeChecker) CheckAndPerformUpgrade() error {
-	return checkAndPerformUpgrade()
-}
-
-type DefaultUpgradePerformer struct{}
-
-func (d DefaultUpgradePerformer) PerformUpgrade() error {
-	return performUpgrade()
-}
-
 func Run() {
 	log.Printf("Starting RedT agent at %s\n", utils.CurrentTimestamp())
 
-	lastUpgradeCheck := time.Now().Add(-upgradeCheckPeriod)
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading configuration: %v", err)
+	}
 
-	ticker := time.NewTicker(pollInterval)
+	lastUpgradeCheck := time.Now().Add(-config.UpgradeCheckPeriod)
+
+	ticker := time.NewTicker(config.PollInterval)
 	for range ticker.C {
-		handleTelemetry(&DefaultTelemetryDataProvider{}, &DefaultTelemetryDataSender{})
-		lastUpgradeCheck = handlePackageInfo(&DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck, &DefaultUpgradeChecker{})
+		handleTelemetry(config, &DefaultTelemetryDataProvider{}, &DefaultTelemetryDataSender{})
+		lastUpgradeCheck = handlePackageInfo(config, &DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck, &DefaultUpgradeChecker{})
 	}
 }
 
-func handleTelemetry(telemetryDataProvider TelemetryDataProvider, telemetryDataSender TelemetryDataSender) {
+func handleTelemetry(config *Config, telemetryDataProvider TelemetryDataProvider, telemetryDataSender TelemetryDataSender) {
 
 	telemetryData, err := telemetryDataProvider.CollectTelemetryData()
 	if err != nil {
 		log.Printf("Error collecting telemetry data: %v", err)
 	} else {
-		err = telemetryDataSender.SendTelemetryData(telemetryData)
+		err = telemetryDataSender.SendTelemetryData(config, telemetryData)
 		if err != nil {
 			log.Printf("Error sending telemetry data: %v", err)
 		}
 	}
 }
 
-func handlePackageInfo(provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time, upgradeChecker UpgradeChecker) time.Time {
-	if time.Since(lastUpgradeCheck) >= upgradeCheckPeriod {
+func handlePackageInfo(config *Config, provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time, upgradeChecker UpgradeChecker) time.Time {
+	if time.Since(lastUpgradeCheck) >= config.UpgradeCheckPeriod {
 		packages, err := provider.GetPackageInfo()
 		if err != nil {
 			log.Printf("Error getting package info: %v", err)
 		} else {
-			err = reporter.ReportPackageInfo(packages)
+			err = reporter.ReportPackageInfo(config, packages)
 			if err != nil {
 				log.Printf("Error reporting package info: %v", err)
 			} else {
-				err = upgradeChecker.CheckAndPerformUpgrade()
+				err = upgradeChecker.CheckAndPerformUpgrade(config)
 				if err != nil {
 					log.Printf("Error checking and performing upgrade: %v", err)
 				}

@@ -20,8 +20,20 @@ func (p *DefaultPackageInfoProvider) GetPackageInfo() ([]PackageInfo, error) {
 
 type DefaultPackageInfoReporter struct{}
 
-func (r *DefaultPackageInfoReporter) ReportPackageInfo(packages []PackageInfo) error {
-	return reportPackageInfo(packages)
+func (r *DefaultPackageInfoReporter) ReportPackageInfo(config *Config, packages []PackageInfo) error {
+	return reportPackageInfo(config, packages)
+}
+
+type DefaultUpgradeChecker struct{}
+
+func (d DefaultUpgradeChecker) CheckAndPerformUpgrade(config *Config) error {
+	return checkAndPerformUpgrade(config)
+}
+
+type DefaultUpgradePerformer struct{}
+
+func (d DefaultUpgradePerformer) PerformUpgrade() error {
+	return performUpgrade()
 }
 
 func getPackageInfo() ([]PackageInfo, error) {
@@ -52,13 +64,13 @@ func getPackageInfo() ([]PackageInfo, error) {
 	return parseFunc(string(out)), nil
 }
 
-func reportPackageInfo(packages []PackageInfo) error {
+func reportPackageInfo(config *Config, packages []PackageInfo) error {
 	data, err := json.Marshal(packages)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.Post(packageEndpoint, "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(config.PackageEndpoint, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -71,9 +83,9 @@ func reportPackageInfo(packages []PackageInfo) error {
 	return nil
 }
 
-func checkAndPerformUpgrade() error {
+func checkAndPerformUpgrade(config *Config) error {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", upgradeEndpoint, nil)
+	req, err := http.NewRequest("GET", config.UpgradeEndpoint, nil)
 	if err != nil {
 		log.Printf("Error creating upgrade request: %v\n", err)
 		return err

@@ -19,7 +19,7 @@ type MockTelemetryDataSender struct {
 	err error
 }
 
-func (m MockTelemetryDataSender) SendTelemetryData(data TelemetryData) error {
+func (m *MockTelemetryDataSender) SendTelemetryData(config *Config, data TelemetryData) error {
 	return m.err
 }
 
@@ -36,7 +36,7 @@ type MockPackageInfoReporter struct {
 	err error
 }
 
-func (m MockPackageInfoReporter) ReportPackageInfo(packages []PackageInfo) error {
+func (m *MockPackageInfoReporter) ReportPackageInfo(config *Config, packages []PackageInfo) error {
 	return m.err
 }
 
@@ -44,15 +44,27 @@ type MockUpgradeChecker struct {
 	err error
 }
 
-func (m MockUpgradeChecker) CheckAndPerformUpgrade() error {
+func (m *MockUpgradeChecker) CheckAndPerformUpgrade(config *Config) error {
 	return m.err
 }
 
+func getTestConfig() *Config {
+	return &Config{
+		BackendURL:         "https://example.com/api",
+		TelemetryEndpoint:  "https://example.com/api/telemetry",
+		PackageEndpoint:    "https://example.com/api/packages",
+		UpgradeEndpoint:    "https://example.com/api/upgrade",
+		PollInterval:       60 * time.Second,
+		UpgradeCheckPeriod: 5 * time.Minute,
+	}
+}
+
 func TestHandleTelemetry(t *testing.T) {
+	testConfig := getTestConfig()
 	tests := []struct {
 		name                  string
 		telemetryDataProvider MockTelemetryDataProvider
-		telemetryDataSender   MockTelemetryDataSender
+		telemetryDataSender   *MockTelemetryDataSender
 	}{
 		{
 			name: "Successful telemetry data collection and send",
@@ -60,7 +72,7 @@ func TestHandleTelemetry(t *testing.T) {
 				data: TelemetryData{},
 				err:  nil,
 			},
-			telemetryDataSender: MockTelemetryDataSender{
+			telemetryDataSender: &MockTelemetryDataSender{
 				err: nil,
 			},
 		},
@@ -70,7 +82,7 @@ func TestHandleTelemetry(t *testing.T) {
 				data: TelemetryData{},
 				err:  errors.New("error collecting telemetry data"),
 			},
-			telemetryDataSender: MockTelemetryDataSender{
+			telemetryDataSender: &MockTelemetryDataSender{
 				err: nil,
 			},
 		},
@@ -80,7 +92,7 @@ func TestHandleTelemetry(t *testing.T) {
 				data: TelemetryData{},
 				err:  nil,
 			},
-			telemetryDataSender: MockTelemetryDataSender{
+			telemetryDataSender: &MockTelemetryDataSender{
 				err: errors.New("error sending telemetry data"),
 			},
 		},
@@ -88,17 +100,18 @@ func TestHandleTelemetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handleTelemetry(tt.telemetryDataProvider, tt.telemetryDataSender)
+			handleTelemetry(testConfig, tt.telemetryDataProvider, tt.telemetryDataSender)
 		})
 	}
 }
 
 func TestHandlePackageInfo(t *testing.T) {
+	testConfig := getTestConfig()
 	tests := []struct {
 		name                string
 		packageInfoProvider MockPackageInfoProvider
-		packageInfoReporter MockPackageInfoReporter
-		upgradeChecker      MockUpgradeChecker
+		packageInfoReporter *MockPackageInfoReporter
+		upgradeChecker      *MockUpgradeChecker
 		shouldUpdate        bool
 		wantError           bool
 	}{
@@ -108,10 +121,10 @@ func TestHandlePackageInfo(t *testing.T) {
 				packages: []PackageInfo{},
 				err:      nil,
 			},
-			packageInfoReporter: MockPackageInfoReporter{
+			packageInfoReporter: &MockPackageInfoReporter{
 				err: nil,
 			},
-			upgradeChecker: MockUpgradeChecker{
+			upgradeChecker: &MockUpgradeChecker{
 				err: nil,
 			},
 			shouldUpdate: true,
@@ -123,10 +136,10 @@ func TestHandlePackageInfo(t *testing.T) {
 				packages: []PackageInfo{},
 				err:      errors.New("error retrieving package info"),
 			},
-			packageInfoReporter: MockPackageInfoReporter{
+			packageInfoReporter: &MockPackageInfoReporter{
 				err: nil,
 			},
-			upgradeChecker: MockUpgradeChecker{
+			upgradeChecker: &MockUpgradeChecker{
 				err: nil,
 			},
 			shouldUpdate: false,
@@ -138,10 +151,10 @@ func TestHandlePackageInfo(t *testing.T) {
 				packages: []PackageInfo{},
 				err:      nil,
 			},
-			packageInfoReporter: MockPackageInfoReporter{
+			packageInfoReporter: &MockPackageInfoReporter{
 				err: errors.New("error reporting package info"),
 			},
-			upgradeChecker: MockUpgradeChecker{
+			upgradeChecker: &MockUpgradeChecker{
 				err: nil,
 			},
 			shouldUpdate: false,
@@ -151,13 +164,13 @@ func TestHandlePackageInfo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lastUpgradeCheck := time.Now().Add(-upgradeCheckPeriod)
-			newUpgradeCheck := handlePackageInfo(tt.packageInfoProvider, tt.packageInfoReporter, lastUpgradeCheck, tt.upgradeChecker)
-			if tt.shouldUpdate && time.Since(newUpgradeCheck) >= upgradeCheckPeriod {
+			lastUpgradeCheck := time.Now().Add(-testConfig.UpgradeCheckPeriod)
+			newUpgradeCheck := handlePackageInfo(testConfig, tt.packageInfoProvider, tt.packageInfoReporter, lastUpgradeCheck, tt.upgradeChecker)
+			if tt.shouldUpdate && time.Since(newUpgradeCheck) >= testConfig.UpgradeCheckPeriod {
 				t.Errorf("Expected lastUpgradeCheck to be updated after upgradeCheckPeriod, but it was not.")
 			}
 
-			if !tt.shouldUpdate && time.Since(newUpgradeCheck) < upgradeCheckPeriod {
+			if !tt.shouldUpdate && time.Since(newUpgradeCheck) < testConfig.UpgradeCheckPeriod {
 				t.Errorf("Expected lastUpgradeCheck not to be updated, but it was.")
 			}
 		})

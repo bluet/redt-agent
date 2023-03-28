@@ -1,3 +1,8 @@
-backendURL: "https://redt.top/api"
-pollInterval: 60
-upgradeCheckPeriod: 5
+backend_url: "https://api.redt.top/agent"
+poll_interval: 60  # seconds
+upgrade_check_period: 5 # minutes
+token: "YOUR CLIENT KEY"
+hostname: "FunkyPenguin"
+
+# logLevel: "info"  # Options: debug, info, warn, error
+# logFile: "/var/log/redt-agent.log"

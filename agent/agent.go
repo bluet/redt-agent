@@ -27,7 +27,7 @@ type TelemetryDataProvider interface {
 }
 
 type TelemetryDataSender interface {
-	SendTelemetryData(config *Config, data TelemetryData) error
+	SendTelemetryData(data TelemetryData) error
 }
 
 type PackageInfoProvider interface {
@@ -35,11 +35,11 @@ type PackageInfoProvider interface {
 }
 
 type PackageInfoReporter interface {
-	ReportPackageInfo(config *Config, packages []PackageInfo) error
+	ReportPackageInfo(packages []PackageInfo) error
 }
 
 type UpgradeChecker interface {
-	CheckAndPerformUpgrade(config *Config) error
+	CheckAndPerformUpgrade() error
 }
 
 type UpgradePerformer interface {
@@ -54,26 +54,34 @@ func Run() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
+	telemetryDataSender := NewDefaultTelemetryDataSender(&TelemetryDataSenderConfig{Endpoint: config.TelemetryEndpoint})
+	telemetryDataProvider := NewDefaultTelemetryDataProvider()
+
 	lastUpgradeCheck := time.Now().Add(-config.UpgradeCheckPeriod)
 
 	ticker := time.NewTicker(config.PollInterval)
 	for range ticker.C {
-		handleTelemetry(config, &DefaultTelemetryDataProvider{}, &DefaultTelemetryDataSender{})
+		err = handleTelemetry(telemetryDataProvider, telemetryDataSender)
+		// FIXME: Handle error
+
 		lastUpgradeCheck = handlePackageInfo(config, &DefaultPackageInfoProvider{}, &DefaultPackageInfoReporter{}, lastUpgradeCheck, &DefaultUpgradeChecker{})
 	}
 }
 
-func handleTelemetry(config *Config, telemetryDataProvider TelemetryDataProvider, telemetryDataSender TelemetryDataSender) {
-
+func handleTelemetry(telemetryDataProvider TelemetryDataProvider, telemetryDataSender TelemetryDataSender) error {
 	telemetryData, err := telemetryDataProvider.CollectTelemetryData()
 	if err != nil {
 		log.Printf("Error collecting telemetry data: %v", err)
-	} else {
-		err = telemetryDataSender.SendTelemetryData(config, telemetryData)
-		if err != nil {
-			log.Printf("Error sending telemetry data: %v", err)
-		}
+		return err
 	}
+
+	err = telemetryDataSender.SendTelemetryData(telemetryData)
+	if err != nil {
+		log.Printf("Error sending telemetry data: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 func handlePackageInfo(config *Config, provider PackageInfoProvider, reporter PackageInfoReporter, lastUpgradeCheck time.Time, upgradeChecker UpgradeChecker) time.Time {

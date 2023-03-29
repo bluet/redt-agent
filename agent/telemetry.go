@@ -16,17 +16,11 @@ import (
 
 type DefaultTelemetryDataProvider struct{}
 
-func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
-	return collectTelemetryData()
+func NewDefaultTelemetryDataProvider() *DefaultTelemetryDataProvider {
+	return &DefaultTelemetryDataProvider{}
 }
 
-type DefaultTelemetryDataSender struct{}
-
-func (d DefaultTelemetryDataSender) SendTelemetryData(config *Config, data TelemetryData) error {
-	return sendTelemetryData(config, data)
-}
-
-func collectTelemetryData() (TelemetryData, error) {
+func (dp *DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
 	var data TelemetryData
 
 	// Collect CPU usage
@@ -67,13 +61,27 @@ func collectTelemetryData() (TelemetryData, error) {
 	return data, nil
 }
 
-func sendTelemetryData(config *Config, data TelemetryData) error {
+type TelemetryDataSenderConfig struct {
+	Endpoint string
+}
+
+type DefaultTelemetryDataSender struct {
+	config *TelemetryDataSenderConfig
+}
+
+func NewDefaultTelemetryDataSender(config *TelemetryDataSenderConfig) *DefaultTelemetryDataSender {
+	return &DefaultTelemetryDataSender{
+		config: config,
+	}
+}
+
+func (ds DefaultTelemetryDataSender) SendTelemetryData(data TelemetryData) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal telemetry data: %v", err)
 	}
 
-	resp, err := http.Post(config.TelemetryEndpoint, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(ds.config.Endpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to send telemetry data: %v", err)
 	}

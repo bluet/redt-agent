@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -32,8 +33,8 @@ func (d DefaultUpgradeChecker) CheckAndPerformUpgrade(config *Config) error {
 
 type DefaultUpgradePerformer struct{}
 
-func (d DefaultUpgradePerformer) PerformUpgrade() error {
-	return performUpgrade()
+func (d DefaultUpgradePerformer) PerformUpgrade(autoYes bool) error {
+	return performUpgrade(autoYes)
 }
 
 func getPackageInfo() ([]PackageInfo, error) {
@@ -45,6 +46,9 @@ func getPackageInfo() ([]PackageInfo, error) {
 	var cmd *exec.Cmd
 	var parseFunc func(string) []PackageInfo
 
+	// TODO: support more package managers
+	// TODO: support other operating systems
+	// TODO: support multiple package managers
 	switch pm {
 	case "apt-get":
 		cmd = exec.Command(pm, "upgrade", "-s")
@@ -99,7 +103,7 @@ func checkAndPerformUpgrade(config *Config) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		err = performUpgrade()
+		err = performUpgrade(true)
 		if err != nil {
 			return err
 		}
@@ -109,6 +113,9 @@ func checkAndPerformUpgrade(config *Config) error {
 }
 
 func getPackageManager() (string, error) {
+	// TODO: support more package managers
+	// TODO: support other operating systems
+	// TODO: support multiple package managers
 	if runtime.GOOS != "linux" {
 		return "", fmt.Errorf("unsupported operating system")
 	}
@@ -132,6 +139,9 @@ func getPackageManager() (string, error) {
 }
 
 func parseAptGetOutput(output string) []PackageInfo {
+	// raw string: Inst libpulse-dev [1:15.99.1+dfsg1-1ubuntu2] (1:15.99.1+dfsg1-1ubuntu2.1 Ubuntu:22.04/jammy-updates [amd64]) []
+	// format: STATUS NAME [VERSION] (NEW_VERSION CATEGORY [ARCHITECTURES]) [OTHER_INFO]
+
 	lines := strings.Split(output, "\n")
 	var packages []PackageInfo
 
@@ -141,8 +151,10 @@ func parseAptGetOutput(output string) []PackageInfo {
 
 			packageInfo := PackageInfo{
 				Name:       parts[1],
-				Version:    parts[2],
-				NewVersion: parts[4],
+				Version:    strings.Trim(parts[2], "[]"),
+				NewVersion: strings.Trim(parts[3], "()"),
+				Category:   parts[4],
+				Arch:       strings.Trim(parts[5], "[]"),
 			}
 
 			packages = append(packages, packageInfo)
@@ -173,7 +185,7 @@ func parseDnfYumOutput(output string) []PackageInfo {
 	return packages
 }
 
-func performUpgrade() error {
+func performUpgrade(autoYes bool) error {
 	fmt.Println("Upgrading packages...")
 
 	pm, err := getPackageManager()
@@ -182,18 +194,37 @@ func performUpgrade() error {
 		return err
 	}
 
-	var cmd *exec.Cmd
-
+	// TODO: support more package managers
+	// TODO: support other operating systems
+	// TODO: support multiple package managers
+	// TODO: when in daemon mode, no user interaction should be required
+	var cmdArgs []string
 	switch pm {
 	case "apt-get":
-		cmd = exec.Command("sudo", pm, "upgrade", "-y")
+		cmdArgs = append(cmdArgs, pm, "upgrade")
+		if autoYes {
+			cmdArgs = append(cmdArgs, "-y")
+		}
 	case "dnf", "yum":
-		cmd = exec.Command("sudo", pm, "upgrade", "-y")
+		cmdArgs = append(cmdArgs, pm, "upgrade")
+		if autoYes {
+			cmdArgs = append(cmdArgs, "-y")
+		}
 	default:
 		err := errors.New("unsupported package manager")
 		log.Printf("%v\n", err)
 		return err
 	}
+
+	log.Printf("Running %v\n", strings.Join(cmdArgs, " "))
+
+	// Run the command in a new interactive shell
+	cmd := exec.Command("sudo", append([]string{"-i", "--"}, cmdArgs...)...)
+
+	// Connect the command's stdin, stdout, and stderr to the current process
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	err = cmd.Run()
 	if err != nil {

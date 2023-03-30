@@ -1,7 +1,14 @@
 {
         "cSpell.words": [
+                "dfsg",
+                "fstype",
+                "fstypes",
                 "gopsutil",
+                "journalctl",
+                "ntfs",
                 "redt",
-                "shirou"
+                "shirou",
+                "sysup",
+                "vfat"
         ]
 }

@@ -12,11 +12,22 @@ type Config struct {
 	TelemetryEndpoint  string
 	PackageEndpoint    string
 	UpgradeEndpoint    string
-	PollInterval       time.Duration `yaml:"poll_interval"`
-	UpgradeCheckPeriod time.Duration `yaml:"upgrade_check_period"`
-	Token              string        `yaml:"token"`
-	Hostname           string        `yaml:"hostname"`
+	PollInterval       time.Duration   `yaml:"poll_interval"`
+	UpgradeCheckPeriod time.Duration   `yaml:"upgrade_check_period"`
+	Token              string          `yaml:"token"`
+	Hostname           string          `yaml:"hostname"`
+	DiskUsage          DiskUsageFilter `yaml:"disk_usage"`
 }
+
+type DiskUsageFilter struct {
+	FSTypes     []string
+	Mountpoints []string
+}
+
+// type DiskUsageFilter struct {
+// 	FSTypes     []string `yaml:"fstypes"`
+// 	Mountpoints []string `yaml:"mountpoints"`
+// }
 
 func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config")
@@ -33,6 +44,8 @@ func LoadConfig() (*Config, error) {
 	upgradeCheckPeriod := viper.GetDuration("upgrade_check_period") * time.Minute
 	token := viper.GetString("token")
 	hostname := viper.GetString("hostname")
+	diskUsageFSTypes := viper.GetStringSlice("disk_usage.fstypes")
+	diskUsageMountpoints := viper.GetStringSlice("disk_usage.mountpoints")
 
 	return &Config{
 		BackendURL:         backendURL,
@@ -43,5 +56,9 @@ func LoadConfig() (*Config, error) {
 		UpgradeCheckPeriod: upgradeCheckPeriod,
 		Token:              token,
 		Hostname:           hostname,
+		DiskUsage: DiskUsageFilter{
+			FSTypes:     diskUsageFSTypes,
+			Mountpoints: diskUsageMountpoints,
+		},
 	}, nil
 }

@@ -3,6 +3,9 @@ poll_interval: 60  # seconds
 upgrade_check_period: 5 # minutes
 token: "YOUR CLIENT KEY"
 hostname: "FunkyPenguin"
+disk_usage:
+  fstypes: ["ext2", "ext3", "ext4", "zfs", "xfs", "ntfs", "vfat"]
+  mountpoints: ["/", "/data"]
 
 # logLevel: "info"  # Options: debug, info, warn, error
 # logFile: "/var/log/redt-agent.log"

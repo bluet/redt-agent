@@ -11,7 +11,7 @@ type MockTelemetryDataProvider struct {
 	err  error
 }
 
-func (m MockTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
+func (m MockTelemetryDataProvider) CollectTelemetryData(config *Config) (TelemetryData, error) {
 	return m.data, m.err
 }
 

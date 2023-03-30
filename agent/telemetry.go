@@ -12,12 +12,13 @@ import (
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
+	"golang.org/x/exp/slices"
 )
 
 type DefaultTelemetryDataProvider struct{}
 
-func (d DefaultTelemetryDataProvider) CollectTelemetryData() (TelemetryData, error) {
-	return collectTelemetryData()
+func (d DefaultTelemetryDataProvider) CollectTelemetryData(config *Config) (TelemetryData, error) {
+	return collectTelemetryData(config)
 }
 
 type DefaultTelemetryDataSender struct{}
@@ -26,7 +27,7 @@ func (d DefaultTelemetryDataSender) SendTelemetryData(config *Config, data Telem
 	return sendTelemetryData(config, data)
 }
 
-func collectTelemetryData() (TelemetryData, error) {
+func collectTelemetryData(config *Config) (TelemetryData, error) {
 	var data TelemetryData
 
 	// Collect CPU usage
@@ -43,12 +44,30 @@ func collectTelemetryData() (TelemetryData, error) {
 	}
 	data.MemoryUsage = memInfo.UsedPercent
 
-	// Collect disk usage
-	diskInfo, err := disk.Usage("/")
+	// Collect disk usage of all mounted disks
+	partitions, err := disk.Partitions(false)
 	if err != nil {
 		return data, fmt.Errorf("failed to collect disk usage: %v", err)
 	}
-	data.DiskUsage = diskInfo.UsedPercent
+	for _, partition := range partitions {
+		// only collect disk usage for:
+		// fstype included in the config.DiskUsage.FSTypes or mountpoint included in config.DiskUsage.MountPoints
+		if !slices.Contains(config.DiskUsage.FSTypes, partition.Fstype) || !slices.Contains(config.DiskUsage.Mountpoints, partition.Mountpoint) {
+			continue
+		}
+
+		usage, err := disk.Usage(partition.Mountpoint)
+		if err != nil {
+			return data, fmt.Errorf("failed to collect disk usage: %v", err)
+		}
+		data.DiskUsage = append(data.DiskUsage, DiskUsage{
+			Path:        partition.Mountpoint,
+			Total:       usage.Total,
+			Used:        usage.Used,
+			Free:        usage.Free,
+			UsedPercent: usage.UsedPercent,
+		})
+	}
 
 	// Collect OS info
 	hostInfo, err := host.Info()
@@ -57,12 +76,21 @@ func collectTelemetryData() (TelemetryData, error) {
 	}
 	data.OSInfo = fmt.Sprintf("%s %s %s", hostInfo.OS, hostInfo.Platform, hostInfo.PlatformVersion)
 
-	// Collect logged-in user
+	// Collect the user which the agent is running as
 	currentUser, err := user.Current()
 	if err != nil {
 		return data, fmt.Errorf("failed to collect logged-in user: %v", err)
 	}
-	data.LoggedInUser = currentUser.Username
+	data.CurrentUser = currentUser.Username
+
+	// Collect all logged-in users
+	onlineUsers, err := host.Users()
+	if err != nil {
+		return data, fmt.Errorf("failed to collect logged-in users: %v", err)
+	}
+	for _, user := range onlineUsers {
+		data.LoggedInUsers = append(data.LoggedInUsers, user.User)
+	}
 
 	return data, nil
 }

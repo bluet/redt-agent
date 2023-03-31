@@ -6,6 +6,7 @@
                 "gopsutil",
                 "journalctl",
                 "ntfs",
+                "pkgs",
                 "redt",
                 "shirou",
                 "sysup",

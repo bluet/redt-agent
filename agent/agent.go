@@ -3,7 +3,10 @@ package agent
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
+
+	"github.com/bluet/syspkg"
 
 	"github.com/bluet/redt-agent/utils"
 )
@@ -109,15 +112,27 @@ func RunShowMetrics() error {
 	// Print upgradable packages
 	fmt.Println("Checking for upgradable packages...")
 	// Create instances of DefaultUpgradeChecker and DefaultUpgradePerformer
-	packageInfo := DefaultPackageInfoProvider{}
-	upgradablePackages, err := packageInfo.GetPackageInfo()
+	// packageInfo := DefaultPackageInfoProvider{}
+	// upgradablePackages, err := packageInfo.GetPackageInfo()
+	pms, err := syspkg.NewPackageManager()
 	if err != nil {
-		return fmt.Errorf("Error checking for upgradable packages: %v", err)
+		fmt.Printf("Error while initializing package managers: %v", err)
+		os.Exit(1)
 	}
+
+	var upgradablePackages []syspkg.PackageInfo
+	for _, pm := range pms {
+		pkgs, err := pm.ListUpgradable()
+		if err != nil {
+			return fmt.Errorf("Error checking for upgradable packages: %T: %v", pm, err)
+		}
+		upgradablePackages = append(upgradablePackages, pkgs...)
+	}
+
 	if len(upgradablePackages) > 0 {
 		fmt.Println("Upgradable packages:")
 		for _, pkg := range upgradablePackages {
-			fmt.Printf("- %s: %s -> %s\n", pkg.Name, pkg.Version, pkg.NewVersion)
+			fmt.Printf("%s: %s %s -> %s (%s)\n", pkg.PackageManager, pkg.Name, pkg.Version, pkg.NewVersion, pkg.Status)
 		}
 	} else {
 		fmt.Println("No upgradable packages found.")
@@ -133,13 +148,20 @@ func RunSysup(autoYes bool) error {
 	// 	return fmt.Errorf("Error loading configuration: %v", err)
 	// }
 
-	err := RunShowMetrics()
+	pms, err := syspkg.NewPackageManager()
+	if err != nil {
+		fmt.Printf("Error while initializing package managers: %v", err)
+		// fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
+	err = RunShowMetrics()
 	if err != nil {
 		return err
 	}
 
 	// Create instances of DefaultUpgradeChecker and DefaultUpgradePerformer
-	upgradePerformer := DefaultUpgradePerformer{}
+	// upgradePerformer := DefaultUpgradePerformer{}
 
 	if !autoYes {
 		fmt.Print("Do you want to perform the upgrade? (Y/n) ")
@@ -151,10 +173,16 @@ func RunSysup(autoYes bool) error {
 	}
 
 	// Call PerformUpgrade on the upgradePerformer instance
-	err = upgradePerformer.PerformUpgrade(autoYes)
-	if err != nil {
-		return fmt.Errorf("Error performing system upgrade: %v", err)
+	// err = upgradePerformer.PerformUpgrade(autoYes)
+	fmt.Println("Performing package upgrade...")
+
+	for _, pm := range pms {
+		err := pm.Upgrade()
+		if err != nil {
+			fmt.Printf("Error performing system upgrade: %v", err)
+		}
 	}
+
 	fmt.Println("System upgrade completed successfully.")
 	return nil
 }

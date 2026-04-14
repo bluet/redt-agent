@@ -6,7 +6,7 @@ require github.com/shirou/gopsutil v3.21.11+incompatible // direct
 
 require github.com/spf13/viper v1.15.0
 
-require github.com/bluet/syspkg v0.0.0-20230331030506-f8d52c246777 // direct
+require github.com/bluet/syspkg v0.1.6 // direct
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

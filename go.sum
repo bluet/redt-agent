@@ -42,6 +42,8 @@ github.com/bluet/syspkg v0.0.0-20230331024517-e2733eb91e52 h1:CN43lek+1kBlsYQ3dU
 github.com/bluet/syspkg v0.0.0-20230331024517-e2733eb91e52/go.mod h1:WxzHqxCf+/kpXR4K5+ske9sghB7tR9UEvTlxCmXMesE=
 github.com/bluet/syspkg v0.0.0-20230331030506-f8d52c246777 h1:h3+hcIMzA3tEqgKxGIY8vqB6GyMkrJqBW549TTOsmWc=
 github.com/bluet/syspkg v0.0.0-20230331030506-f8d52c246777/go.mod h1:WxzHqxCf+/kpXR4K5+ske9sghB7tR9UEvTlxCmXMesE=
+github.com/bluet/syspkg v0.1.6 h1:cYsVmxt64iw90q2axCvW2TySMFnKGqE+rtA+vq8mXLY=
+github.com/bluet/syspkg v0.1.6/go.mod h1:byK9j3/8/pqnbQjNvQrehGEY2r2mIv7Lm5h9wXTY6aw=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=

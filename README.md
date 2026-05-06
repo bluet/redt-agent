@@ -1,6 +1,7 @@
 # RedT Agent
 
-[![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/bluet/redt-agent/)[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent?ref=badge_shield)
+[![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/bluet/redt-agent/) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fbluet%2Fredt-agent?ref=badge_shield)
 
 [![GitHub Issues](https://img.shields.io/github/issues/bluet/redt-agent.svg)](https://github.com/bluet/redt-agent/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/bluet/redt-agent.svg)](https://github.com/bluet/redt-agent/pulls)

@@ -13,7 +13,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 )
 
-require github.com/bluet/syspkg v0.1.6 // direct
+require github.com/bluet/syspkg v0.1.7 // direct
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

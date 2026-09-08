@@ -1,6 +1,6 @@
 module github.com/bluet/redt-agent
 
-go 1.25.0
+go 1.26.0
 
 require github.com/shirou/gopsutil v3.21.11+incompatible // direct
 
@@ -31,7 +31,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/exp v0.0.0-20260603202125-055de637280b // direct
+	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // direct
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
